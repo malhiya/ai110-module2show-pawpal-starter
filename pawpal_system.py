@@ -27,13 +27,19 @@ class Scheduler:
     def __init__(self, owner: Owner, tasks: list[Task]):
         self.owner = owner
         self.tasks: list[Task] = tasks
+        # reset this at the start of each generate_plan call to avoid stale results
         self.skipped_tasks: list[Task] = []
+        # store the last generated plan so explain_plan can reference it without re-running
+        self.plan: list[Task] = []
 
     def generate_plan(self) -> list[Task]:
         """
         Filter, sort, and greedily select tasks that fit within
         owner.available_minutes. Stores unfit tasks in skipped_tasks.
         Returns the ordered list of selected tasks.
+
+        Note: reset skipped_tasks and use a local 'remaining' counter —
+        never mutate owner.available_minutes directly.
         """
         pass
 
@@ -41,6 +47,9 @@ class Scheduler:
         """
         Returns a human-readable string explaining why each task was
         included or skipped.
+
+        Note: depends on self.plan and self.skipped_tasks being populated.
+        Call generate_plan() first, or guard with an early return if self.plan is empty.
         """
         pass
 
@@ -49,9 +58,11 @@ class Scheduler:
         pass
 
     def remove_task(self, task: Task) -> None:
-        """Remove a task from the task list."""
+        """Remove a task from the task list.
+        Raise ValueError if the task is not found."""
         pass
 
     def edit_task(self, old: Task, updated: Task) -> None:
-        """Replace old task with updated task."""
+        """Replace old task with updated task.
+        Raise ValueError if old task is not found."""
         pass
