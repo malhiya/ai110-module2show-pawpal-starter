@@ -7,7 +7,7 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
-
+The initial UML design consists of 4 classes. Owner, Pet, Task, and Scheduler. The Pet represents the animal that is being cared for. The Owner represents who is using thr app and the time budget they hae available. Task will contain the type of task, it's priority, and duration. And Scheduler will help organize the tasks and help with making a Daily plan. 
 
 **b. Design changes**
 
