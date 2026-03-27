@@ -4,101 +4,126 @@
 
 ```mermaid
 classDiagram
-    class Pet {
-        - name: str
-        - species: str
-        - age: int
-    }
-
-    class Owner {
-        - name: str
-        - available_minutes: int
-        - pet: Pet
-    }
-
     class Task {
         - name: str
         - duration_minutes: int
         - priority: str
         - category: str
+        - frequency: str
+        - is_complete: bool
     }
 
-    class Scheduler {
-        - owner: Owner
+    class Pet {
+        - name: str
+        - species: str
+        - age: int
         - tasks: list[Task]
-        - skipped_tasks: list[Task]
-        + generate_plan() list[Task]
-        + explain_plan() str
         + add_task(task: Task)
         + remove_task(task: Task)
         + edit_task(old: Task, updated: Task)
     }
 
-    Owner "1" --> "1" Pet : has one
+    class Owner {
+        - name: str
+        - available_minutes: int
+        - pets: list[Pet]
+        + add_pet(pet: Pet)
+        + remove_pet(pet: Pet)
+    }
+
+    class Scheduler {
+        - owner: Owner
+        - skipped_tasks: list[Task]
+        - plan: list[Task]
+        + generate_plan() list[Task]
+        + explain_plan() str
+    }
+
+    Owner "1" --> "many" Pet : manages
+    Pet "1" --> "many" Task : owns
     Scheduler --> Owner : uses
-    Scheduler "1" --> "many" Task : uses
 ```
 
 ## Class Diagram (ASCII)
 
 ```
 ┌─────────────────────────────┐
+│            Task             │
+│  A single pet care activity │
+├─────────────────────────────┤
+│ - name: str                 │
+│ - duration_minutes: int     │
+│ - priority: str             │
+│   (high / medium / low)     │
+│ - category: str             │
+│ - frequency: str            │
+│   (daily, weekly, etc.)     │
+│ - is_complete: bool         │
+└─────────────────────────────┘
+          △ owns many
+          │
+┌─────────────────────────────┐
 │            Pet              │
-│  Represents the animal      │
-│  being cared for            │
+│  Stores pet details and     │
+│  its list of care tasks     │
 ├─────────────────────────────┤
 │ - name: str                 │
 │ - species: str              │
 │ - age: int                  │
-└─────────────────────────────┘
-          △ has one
-          │
-┌─────────────────────────────┐
-│           Owner             │
-│  The person using the app.  │
-│  Defines the time budget    │
-│  available for care tasks   │
+│ - tasks: list[Task]         │
 ├─────────────────────────────┤
-│ - name: str                 │
-│ - available_minutes: int    │
-│ - pet: Pet                  │
-└─────────────────────────────┘
-          │ passed into
-          ▼
-┌─────────────────────────────┐       ┌─────────────────────────────┐
-│         Scheduler           │ uses  │            Task             │
-│  Core logic class.          │──────▶│  A single pet care          │
-│  Takes the owner and task   │       │  activity with duration     │
-│  list and produces a        │       │  and priority               │
-│  filtered, prioritized plan │       ├─────────────────────────────┤
-├─────────────────────────────┤       │ - name: str                 │
-│ - owner: Owner              │       │ - duration_minutes: int     │
-│ - tasks: list[Task]         │       │ - priority: str             │
-│ - skipped_tasks: list[Task] │       │   (high / medium / low)     │
-├─────────────────────────────┤       │ - category: str             │
-│ + generate_plan(): list     │       │   (walk, feeding, meds,     │
-│   [Task]                    │       │    grooming, etc.)          │
-│ + explain_plan(): str       │       └─────────────────────────────┘
 │ + add_task(task: Task)      │
 │ + remove_task(task: Task)   │
 │ + edit_task(old: Task,      │
 │     updated: Task)          │
 └─────────────────────────────┘
+          △ manages many
+          │
+┌─────────────────────────────┐
+│           Owner             │
+│  Manages multiple pets and  │
+│  provides access to all     │
+│  their tasks                │
+├─────────────────────────────┤
+│ - name: str                 │
+│ - available_minutes: int    │
+│ - pets: list[Pet]           │
+├─────────────────────────────┤
+│ + add_pet(pet: Pet)         │
+│ + remove_pet(pet: Pet)      │
+└─────────────────────────────┘
+          │ passed into
+          ▼
+┌─────────────────────────────┐
+│         Scheduler           │
+│  Retrieves, organizes, and  │
+│  manages tasks across all   │
+│  of the owner's pets        │
+├─────────────────────────────┤
+│ - owner: Owner              │
+│ - skipped_tasks: list[Task] │
+│ - plan: list[Task]          │
+├─────────────────────────────┤
+│ + generate_plan(): list     │
+│   [Task]                    │
+│ + explain_plan(): str       │
+└─────────────────────────────┘
 ```
 
 ## Relationships
 
-- **Owner has one Pet** — the owner's pet is the subject of all care tasks
-- **Scheduler uses Owner** — reads `available_minutes` to constrain the plan
-- **Scheduler uses Task[]** — filters and sorts tasks to build the final plan
+- **Pet owns many Tasks** — each pet carries its own task list (walks, meds, feeding, etc.)
+- **Owner manages many Pets** — one owner can have multiple pets
+- **Scheduler uses Owner** — aggregates tasks from all `owner.pets` to build and explain the plan
 
 ## Scheduling Logic (generate_plan)
 
-1. Filter out tasks whose `duration_minutes` exceeds remaining time
-2. Sort remaining tasks by priority (high → medium → low)
-3. Greedily add tasks until `available_minutes` is exhausted
-4. Store any tasks that didn't fit in `skipped_tasks`
-5. Return the selected tasks as an ordered list
+1. Collect all tasks from every pet in `owner.pets`
+2. Filter out already-complete tasks (`is_complete == True`)
+3. Sort remaining tasks by priority (high → medium → low)
+4. Greedily add tasks until `available_minutes` is exhausted
+5. Store tasks that didn't fit in `skipped_tasks`
+6. Return the selected tasks as an ordered list
 
 ## Explanation Logic (explain_plan)
 
