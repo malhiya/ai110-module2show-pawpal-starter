@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import date, timedelta
 
 
 @dataclass
@@ -11,12 +12,21 @@ class Task:
     scheduled_time: str = "08:00"  # 24-hour format, e.g. "08:00", "14:30"
     scheduled_day: str = "Monday"  # for weekly tasks: which day of the week
     is_complete: bool = False
-    # Note: is_complete is never auto-reset — for recurring tasks (e.g. daily walks),
-    # you'll need to reset this between planning sessions manually.
+    pet_name: str = ""       # set automatically when added to a pet via Pet.add_task
+    scheduled_date: str = "" # ISO date string, e.g. "2026-03-29"; set on creation and next occurrences
 
     def mark_complete(self) -> None:
         """Mark this task as complete."""
         self.is_complete = True
+
+    def next_occurrence(self) -> "Task":
+        """Return a new incomplete copy of this task scheduled for its next occurrence.
+        Daily tasks advance by 1 day; weekly tasks advance by 7 days."""
+        if self.frequency == "daily":
+            next_date = date.today() + timedelta(days=1)
+        else:  # weekly
+            next_date = date.today() + timedelta(weeks=1)
+        return replace(self, is_complete=False, scheduled_date=next_date.isoformat(), pet_name="")
 
 
 class Pet:
@@ -28,7 +38,15 @@ class Pet:
 
     def add_task(self, task: Task) -> None:
         """Add a task to this pet's task list."""
+        task.pet_name = self.name
         self.tasks.append(task)
+
+    def complete_task(self, task: Task) -> Task:
+        """Mark task complete and add a new instance scheduled for its next occurrence."""
+        task.mark_complete()
+        next_task = task.next_occurrence()
+        self.add_task(next_task)  # sets pet_name automatically
+        return next_task
 
     def remove_task(self, task: Task) -> None:
         """Remove a task from this pet's task list, or raise ValueError if not found."""
@@ -126,16 +144,29 @@ class Scheduler:
 
         return explanation
 
-    def generate_weekly_schedule(self) -> dict[str, list[Task]]:
+    def sort_by_time(self, tasks: list[Task]) -> list[Task]:
+        """Return a new list of tasks sorted by their scheduled_time attribute (ascending)."""
+        return sorted(tasks, key=lambda t: t.scheduled_time)
+
+    def filter_by_pet(self, tasks: list[Task], pet_name: str) -> list[Task]:
+        """Return only tasks belonging to the named pet. Returns all tasks if pet_name is 'All Pets'."""
+        if pet_name == "All Pets":
+            return tasks
+        return [task for task in tasks if task.pet_name == pet_name]
+
+    def generate_weekly_schedule(self, pet_name: str = "All Pets") -> dict[str, list[Task]]:
         """Return a dict mapping each day of the week to its list of tasks, sorted by scheduled_time.
-        Only includes tasks that fit within the time budget (skipped tasks are excluded)."""
+        Only includes tasks that fit within the time budget (skipped tasks are excluded).
+        Pass a pet_name to filter to a single pet, or 'All Pets' for the combined schedule."""
         if not self.plan:
             self.generate_plan()
 
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         schedule: dict[str, list[Task]] = {day: [] for day in days}
 
-        for task in self.plan:
+        tasks_to_schedule = self.filter_by_pet(self.plan, pet_name)
+
+        for task in tasks_to_schedule:
             if task.frequency == "daily":
                 for day in days:
                     schedule[day].append(task)

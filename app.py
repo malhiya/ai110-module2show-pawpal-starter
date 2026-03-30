@@ -127,7 +127,7 @@ else:
                         key=f"task_{selected_owner_name}_{selected_pet_name}_{i}"
                     )
                     if checked and not task.is_complete:
-                        task.mark_complete()
+                        selected_pet.complete_task(task)
                 with col_status:
                     if task.is_complete:
                         st.success("✅ Done")
@@ -137,22 +137,35 @@ else:
         st.divider()
 
         st.subheader("Build Schedule")
-        st.caption(f"Schedule for {selected_owner_name} and {selected_pet_name}")
+        st.caption(f"Schedule for {selected_owner_name} — all pets")
 
         if st.button("Generate schedule"):
-            temp_owner = Owner(selected_owner.name, selected_owner.available_minutes)
-            temp_owner.add_pet(selected_pet)
-            scheduler = Scheduler(temp_owner)
+            scheduler = Scheduler(selected_owner)
             plan = scheduler.generate_plan()
-            st.write(scheduler.explain_plan(selected_pet.tasks))
+            st.session_state["last_plan_scheduler"] = scheduler
+            st.session_state["last_plan"] = plan
+            all_tasks = [task for pet in selected_owner.pets for task in pet.tasks]
+            st.write(scheduler.explain_plan(all_tasks))
+
+        if "last_plan_scheduler" in st.session_state and st.session_state["last_plan"]:
+            if st.button("Sort by Time"):
+                sorted_tasks = st.session_state["last_plan_scheduler"].sort_by_time(st.session_state["last_plan"])
+                st.markdown("**Tasks sorted by scheduled time:**")
+                for task in sorted_tasks:
+                    st.write(f"`{task.scheduled_time}` — {task.name} [{task.pet_name}] ({task.priority}, {task.duration_minutes} min)")
 
         st.divider()
         st.subheader("Weekly Schedule")
+
+        pet_filter_options = ["All Pets"] + [p.name for p in selected_owner.pets]
+        selected_pet_filter = st.selectbox("Sort by pet", pet_filter_options, key="weekly_pet_filter")
+
         if st.button("Generate weekly schedule"):
-            temp_owner = Owner(selected_owner.name, selected_owner.available_minutes)
-            temp_owner.add_pet(selected_pet)
-            scheduler = Scheduler(temp_owner)
-            weekly = scheduler.generate_weekly_schedule()
+            scheduler = Scheduler(selected_owner)
+            st.session_state["last_weekly_scheduler"] = scheduler
+
+        if "last_weekly_scheduler" in st.session_state:
+            weekly = st.session_state["last_weekly_scheduler"].generate_weekly_schedule(pet_name=selected_pet_filter)
 
             days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -162,7 +175,7 @@ else:
             if not all_times:
                 st.info("No tasks scheduled yet.")
             else:
-                # header row: Time | Mon | Tue | ...
+                # header row: Time | Pet | Mon | Tue | ...
                 header_cols = st.columns([1] + [2] * 7)
                 header_cols[0].markdown("**Time**")
                 for i, day in enumerate(days):
@@ -177,6 +190,7 @@ else:
                     for i, day in enumerate(days):
                         tasks_at_time = [t for t in weekly[day] if t.scheduled_time == time_slot]
                         if tasks_at_time:
-                            row_cols[i + 1].write("\n".join(t.name for t in tasks_at_time))
+                            row_cols[i + 1].write("\n".join(f"{t.name} [{t.pet_name}]" for t in tasks_at_time))
                         else:
                             row_cols[i + 1].caption("—")
+
