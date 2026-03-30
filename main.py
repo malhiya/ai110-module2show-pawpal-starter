@@ -79,3 +79,4 @@ while not all(task.is_complete for task in scheduler.plan):
 
 if all(task.is_complete for task in scheduler.plan):
     print("\nAll tasks are done for today!")
+

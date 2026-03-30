@@ -109,16 +109,16 @@ class Scheduler:
 
         explanation = ""
 
-        explanation += "Tasks included in the plan:\n"
+        explanation += "Tasks included in the plan:\n\n"
         for task in self.plan:
             index = all_tasks.index(task)
             explanation += f"  {index}. {task.name} ({task.priority} priority, {task.duration_minutes} min) — fits within time budget\n"
 
         if self.skipped_tasks:
-            explanation += "\nTasks skipped:\n"
+            explanation += "\nTasks skipped:\n\n"
             for task in self.skipped_tasks:
                 index = all_tasks.index(task)
-                explanation += f"  {index}. {task.name} ({task.priority} priority, {task.duration_minutes} min) — not enough time remaining\n"
+                explanation += f"  {index}. {task.name} ({task.priority} priority, {task.duration_minutes} min) — not enough time remaining\n\n"
 
         explanation += "\nTasks are organized by priority (high → medium → low), ensuring the most important care gets done first within the available time budget.\n"
 
