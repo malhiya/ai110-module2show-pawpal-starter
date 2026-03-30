@@ -130,10 +130,13 @@ else:
                         )
             selected_pet.add_task(new_task)
 
+        if "editing_task_index" not in st.session_state:
+            st.session_state.editing_task_index = None
+
         if selected_pet.tasks:
             st.write("Current tasks:")
             for i, task in enumerate(selected_pet.tasks):
-                col_check, col_status = st.columns([3, 1])
+                col_check, col_status, col_edit, col_delete = st.columns([3, 1, 1, 1])
                 with col_check:
                     checked = st.checkbox(
                         f"{task.name} ({task.priority}, {task.duration_minutes} min)",
@@ -145,6 +148,48 @@ else:
                 with col_status:
                     if task.is_complete:
                         st.success("✅ Done")
+                with col_edit:
+                    if st.button("Edit", key=f"edit_{selected_owner_name}_{selected_pet_name}_{i}"):
+                        st.session_state.editing_task_index = i
+                with col_delete:
+                    if st.button("Delete", key=f"delete_{selected_owner_name}_{selected_pet_name}_{i}"):
+                        selected_pet.remove_task(task)
+                        if st.session_state.editing_task_index == i:
+                            st.session_state.editing_task_index = None
+                        st.rerun()
+
+            edit_i = st.session_state.editing_task_index
+            if edit_i is not None and edit_i < len(selected_pet.tasks):
+                task_to_edit = selected_pet.tasks[edit_i]
+                st.markdown("**Edit task:**")
+                with st.form(key="edit_task_form"):
+                    new_name = st.text_input("Task title", value=task_to_edit.name)
+                    new_duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=task_to_edit.duration_minutes)
+                    new_priority = st.selectbox("Priority", ["low", "medium", "high"], index=["low", "medium", "high"].index(task_to_edit.priority))
+                    new_frequency = st.selectbox("Frequency", ["daily", "weekly"], index=["daily", "weekly"].index(task_to_edit.frequency))
+                    new_time = st.time_input("Time", value=datetime.time(*map(int, task_to_edit.scheduled_time.split(":"))))
+                    new_day = st.selectbox("Day (weekly only)", days_of_week, index=days_of_week.index(task_to_edit.scheduled_day), disabled=(new_frequency == "daily"))
+                    col_save, col_cancel = st.columns(2)
+                    save = col_save.form_submit_button("Save")
+                    cancel = col_cancel.form_submit_button("Cancel")
+
+                if save:
+                    from dataclasses import replace as dc_replace
+                    updated = dc_replace(
+                        task_to_edit,
+                        name=new_name,
+                        duration_minutes=int(new_duration),
+                        priority=new_priority,
+                        frequency=new_frequency,
+                        scheduled_time=new_time.strftime("%H:%M"),
+                        scheduled_day=new_day,
+                    )
+                    selected_pet.edit_task(task_to_edit, updated)
+                    st.session_state.editing_task_index = None
+                    st.rerun()
+                if cancel:
+                    st.session_state.editing_task_index = None
+                    st.rerun()
         else:
             st.info("No tasks yet. Add one above.")
 
