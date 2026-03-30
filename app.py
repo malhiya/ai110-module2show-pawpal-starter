@@ -190,7 +190,11 @@ else:
                     for i, day in enumerate(days):
                         tasks_at_time = [t for t in weekly[day] if t.scheduled_time == time_slot]
                         if tasks_at_time:
-                            row_cols[i + 1].write("\n".join(f"{t.name} [{t.pet_name}]" for t in tasks_at_time))
+                            for t in tasks_at_time:
+                                key = f"weekly_{t.name}_{t.pet_name}_{day}_{time_slot}"
+                                is_done = st.session_state.get(key, False)
+                                label = f"~~{t.name} [{t.pet_name}]~~" if is_done else f"{t.name} [{t.pet_name}]"
+                                row_cols[i + 1].checkbox(label, value=is_done, key=key)
                         else:
                             row_cols[i + 1].caption("—")
 
