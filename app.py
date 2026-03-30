@@ -114,6 +114,20 @@ else:
                 scheduled_time=scheduled_time.strftime("%H:%M"),
                 scheduled_day=scheduled_day,
             )
+            # warn if any existing task across all pets starts at the same time on the same day
+            all_existing = [t for pet in selected_owner.pets for t in pet.tasks]
+            for existing in all_existing:
+                if existing.scheduled_time == new_task.scheduled_time and not existing.is_complete:
+                    same_day = (
+                        existing.frequency == "daily"
+                        or new_task.frequency == "daily"
+                        or existing.scheduled_day == new_task.scheduled_day
+                    )
+                    if same_day:
+                        st.warning(
+                            f"'{new_task.name}' starts at {new_task.scheduled_time}, "
+                            f"same as existing task '{existing.name}'. Task was still added."
+                        )
             selected_pet.add_task(new_task)
 
         if selected_pet.tasks:
@@ -166,6 +180,7 @@ else:
 
         if "last_weekly_scheduler" in st.session_state:
             weekly = st.session_state["last_weekly_scheduler"].generate_weekly_schedule(pet_name=selected_pet_filter)
+
 
             days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 

@@ -154,6 +154,22 @@ class Scheduler:
             return tasks
         return [task for task in tasks if task.pet_name == pet_name]
 
+    def detect_conflicts(self, weekly: dict[str, list[Task]]) -> list[str]:
+        """Return warning messages for any two tasks starting at the same time on the same day."""
+        warnings = []
+        for day, tasks in weekly.items():
+            seen = {}  # scheduled_time -> first task at that slot
+            for task in tasks:
+                if task.scheduled_time in seen:
+                    other = seen[task.scheduled_time]
+                    warnings.append(
+                        f"{day} at {task.scheduled_time}: '{task.name}' [{task.pet_name}] "
+                        f"conflicts with '{other.name}' [{other.pet_name}]"
+                    )
+                else:
+                    seen[task.scheduled_time] = task
+        return warnings
+
     def generate_weekly_schedule(self, pet_name: str = "All Pets") -> dict[str, list[Task]]:
         """Return a dict mapping each day of the week to its list of tasks, sorted by scheduled_time.
         Only includes tasks that fit within the time budget (skipped tasks are excluded).
