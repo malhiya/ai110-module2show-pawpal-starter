@@ -22,6 +22,10 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling
+
+Additonal features are added for a more natural and cleaner task scheduling. Weekly schedule output allows for recurring tasks to show. Filtering a schedule by a Pet allows a user to see the schedule of an individual pet. Tasks can also be sorted by time. And task conflictions are detected for any pet under the same owner for tasks with the same starting time. 
+
 ## Getting started
 
 ### Setup
